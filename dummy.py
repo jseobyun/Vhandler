@@ -1,4 +1,5 @@
 import os
+import cv2
 import json
 import numpy as np
 
@@ -22,41 +23,62 @@ def get_person_box(person):
     return (cx, cy, w, h)
 
 if __name__=='__main__':
-    root_path = '/media/user/SSD_yjs/people_snapshot_public'
-    subjects = os.listdir(root_path)
-    for subject in subjects:
-        print(subject)
-        video_dir = os.path.join(root_path, subject)
-        image_dir = os.path.join(root_path, subject, 'images')
-        kps_dir = os.path.join(root_path, subject, 'keypoints')
-        new_kps_dir = os.path.join(root_path, subject, 'new_keypoints')
-        if not os.path.exists(new_kps_dir):
-            os.mkdir(new_kps_dir)
-        kps_name = os.listdir(new_kps_dir)
-        for kp in kps_name:
-            path = os.path.join(new_kps_dir, kp)
-            with open(path, 'r') as json_file:
-                sample = json.load(json_file)
-                if len(sample['people']) != 1:
-                    print(path)
-                # if len(sample['people']) != 1:
-                #     boxes = []
-                #     for i in range(len(sample['people'])):
-                #         person = sample['people'][i]
-                #         boxes.append(get_person_box(person))
-                #     boxes = np.array(boxes)
-                #     boxes[:, 0] -= 540
-                #     boxes[:, 1] -= 540
-                #     dist = np.sqrt(np.sum(boxes[:, :2]**2, axis=1))
-                #     dist_min = np.argmin(dist)
-                #     area = boxes[:, 2] * boxes[:, 3]
-                #     area_ax = np.argmax(area)
-                #     assert area_ax == dist_min
-                #     sample['people'] = [sample['people'][dist_min]]
+    root_path = '/home/user/Desktop/yjs/codes/smplify-x/MeshFit/data/realsense'
+    depth_dir = os.path.join(root_path, 'depth')
+    img_dir = os.path.join(root_path, 'img')
+    mask_dir = os.path.join(root_path, 'graphonomy_output')
+    save_dir = os.path.join(root_path, 'masks')
 
-            # path = os.path.join(new_kps_dir, kp)
-            # with open(path, 'w') as json_file:
-            #     json.dump(sample, json_file)
+    img_names = os.listdir(img_dir)
+    depth_names = os.listdir(depth_dir)
+    for i in range(115):
+        img_path = os.path.join(img_dir, str(i)+'.jpg')
+        depth_path = os.path.join(depth_dir, str(i)+'.npy')
+        mask_path = os.path.join(mask_dir, str(i)+'_resized.png')
+        save_path = os.path.join(save_dir, str(i) + '.png')
+
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE)
+        mask = cv2.resize(mask, (1280, 720))
+
+        mask_new = mask!=0
+        mask_new = np.array(mask_new*255, dtype=np.uint8)
+        cv2.imwrite(save_path, mask_new)
+
+
+        depth = np.load(depth_path)
+
+        valid = (mask!=0)#*(depth != 0)*(depth <3.5)
+
+        img = cv2.imread(img_path)
+        img_resized = cv2.resize(img, (640, 360))
+        cv2.imwrite(os.path.join(root_path, 'img_resized', str(i)+'_resized.jpg'), img_resized)
+        img[~valid, :] = 0.0
+        cv2.imshow('tmp', img)
+        cv2.waitKey(20)
+
+    ## keypoints trim
+    # root_path = '/home/user/Desktop/yjs/codes/smplify-x/MeshFit/data/realsense/keypoints_new'
+    # save_path = '/home/user/Desktop/yjs/codes/smplify-x/MeshFit/data/realsense/keypoints_new'
+    # file_names = os.listdir(root_path)
+    # for file_name in file_names:
+    #     path = os.path.join(root_path, file_name)
+    #     with open(path, 'r') as json_file:
+    #         sample = json.load(json_file)
+    #         if len(sample['people']) != 1:
+    #             print(path)
+    #             boxes = []
+    #             for i in range(len(sample['people'])):
+    #                 person = sample['people'][i]
+    #                 boxes.append(get_person_box(person))
+    #             boxes = np.array(boxes)
+    #             area = boxes[:, 2] * boxes[:, 3]
+    #
+    #             area_ax = np.argmax(area)
+    #             sample['people'] = [sample['people'][area_ax]]
+    #     #
+    #     # path = os.path.join(save_path, file_name)
+    #     # with open(path, 'w') as json_file:
+    #     #     json.dump(sample, json_file)
 
 
 
